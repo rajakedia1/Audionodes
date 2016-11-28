@@ -99,7 +99,6 @@ class RawAudioSocket(NodeSocket):
     cache = {}
     
     def getData(self, time, rate, length):
-        
         if self.is_output and self.path_from_id() in self.cache.keys():
             if self.cache[self.path_from_id()]["time"] == time and self.cache[self.path_from_id()]["rate"] == rate and self.cache[self.path_from_id()]["length"] == length:
                 return self.cache[self.path_from_id()]["data"]
@@ -186,8 +185,7 @@ class Oscillator(Node, AudioTreeNode):
         
         if rebuildCache:
             self.oscillatorStates[self.path_from_id()] = np.array([np.zeros(len(self.inputs[0].getData(time, rate, length)))])
-
-       
+        
         freq = self.inputs[0].getData(time, rate, length)
         phase = ((freq.cumsum(axis=1)/rate).transpose() + self.oscillatorStates[self.path_from_id()]).transpose()
         self.oscillatorStates[self.path_from_id()] = (phase[:,-1] % 1)
@@ -319,6 +317,36 @@ class Noise(Node, AudioTreeNode):
     
     def init(self, context):
         self.outputs.new('RawAudioSocketType', "Audio")
+
+class Clock(Node, AudioTreeNode):
+    '''Sends trigger signals at a certain BPM'''
+    bl_idname = 'ClockNode'
+    bl_label = 'Clock'
+    
+    clockStates = {}
+    
+    def callback(self, socket, time, rate, length):
+        bpm = self.inputs[0].getData(time, rate, length)
+        rebuildCache = False
+        try:
+            if len(self.clockStates[self.path_from_id()]) != len(bpm):
+                rebuildCache = True
+        except KeyError:
+            rebuildCache = True
+        if rebuildCache:
+            self.clockStates[self.path_from_id()] = np.array([np.zeros(len(bpm))])
+        
+        freq = bpm / 60
+        states = self.clockStates[self.path_from_id()]
+        phase = ((freq.cumsum(axis=1)/rate).transpose() + states).transpose()
+        self.clockStates[self.path_from_id()] = [phase[:,-1] % 1]
+        states = np.array(states).transpose()
+        phase = np.concatenate((states, phase), axis=1)
+        return np.diff(np.rint(phase))
+    
+    def init(self, context):
+        self.inputs.new('RawAudioSocketType', "BPM")
+        self.outputs.new('RawAudioSocketType', "Trigger")
 
 # Derived from the Node base type.
 class Sum(Node, AudioTreeNode):
@@ -496,6 +524,9 @@ node_categories = [
         NodeItem("SignalSumNode"),
         NodeItem("SignalMulNode"),
     ]),
+    AudioNodeCategory("AUDIO_TRIGGERS", "Triggers", items=[
+        NodeItem("ClockNode"),
+    ]),
 ]
 
 
@@ -519,6 +550,7 @@ def register():
     bpy.utils.register_class(Triangle)
     bpy.utils.register_class(Mul)
     bpy.utils.register_class(Piano)
+    bpy.utils.register_class(Clock)
 
     nodeitems_utils.register_node_categories("AUDIONODES", node_categories)
 
@@ -539,6 +571,7 @@ def unregister():
     bpy.utils.unregister_class(Triangle)
     bpy.utils.unregister_class(Mul)
     bpy.utils.unregister_class(Piano)
+    bpy.utils.unregister_class(Clock)
 
 
 if __name__ == "__main__":

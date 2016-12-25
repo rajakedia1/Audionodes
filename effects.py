@@ -17,20 +17,20 @@ class DelayNode(Node, AudioTreeNode):
 
         inputData = self.inputs[0].getData(timeData, rate, length)[0].sum(axis=0)
 
-        print(len(self.data[self.path_from_id()])*(length/rate))
+        print(len(self.data[self.path_from_id()])*length)
 
         print(self.inputs[1].getData(timeData, rate, length)[0][0][0])
 
         self.data[self.path_from_id()].append(inputData)
-        if int(len(self.data[self.path_from_id()])) > int(self.inputs[1].getData(timeData, rate, length)[0][0][0]*(rate/length)):
+        if int(len(self.data[self.path_from_id()])) > int(self.inputs[1].getData(timeData, rate, length)[0][0][0]/length):
 
             [self.data[self.path_from_id()].popleft() for _i in range(len(self.data[self.path_from_id()])-int(self.inputs[1].getData(timeData, rate, length)[0][0][0]*rate))]
 
-        if int(len(self.data[self.path_from_id()])) < int(self.inputs[1].getData(timeData, rate, length)[0][0][0]*(rate/length)):
+        if int(len(self.data[self.path_from_id()])) < int(self.inputs[1].getData(timeData, rate, length)[0][0][0]/length):
 
             self.data[self.path_from_id()].append(inputData)
             return np.array([(inputData * 0.5, self.stamp[self.path_from_id()])])
-        elif int(len(self.data[self.path_from_id()])) == int(self.inputs[1].getData(timeData, rate, length)[0][0][0]*(rate/length)):
+        else:
             newData = self.data[self.path_from_id()].popleft()
             result = (newData + inputData) * 0.5
             self.data[self.path_from_id()].append(result)

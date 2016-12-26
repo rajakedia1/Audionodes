@@ -17,24 +17,20 @@ class DelayNode(Node, AudioTreeNode):
 
         inputData = self.inputs[0].getData(timeData, rate, length)[0].sum(axis=0)
 
-        print(len(self.data[self.path_from_id()])*length)
-
-        print(self.inputs[1].getData(timeData, rate, length)[0][0][0])
-
         self.data[self.path_from_id()].append(inputData)
-        if int(len(self.data[self.path_from_id()])) > int(self.inputs[1].getData(timeData, rate, length)[0][0][0]/length):
+        while (len(self.data[self.path_from_id()])-1)*length > self.inputs[1].getData(timeData, rate, length)[0][0][0]:
 
-            [self.data[self.path_from_id()].popleft() for _i in range(len(self.data[self.path_from_id()])-int(self.inputs[1].getData(timeData, rate, length)[0][0][0]*rate))]
+            self.data[self.path_from_id()].popleft()
 
-        if int(len(self.data[self.path_from_id()])) < int(self.inputs[1].getData(timeData, rate, length)[0][0][0]/length):
+        if len(self.data[self.path_from_id()])*length < self.inputs[1].getData(timeData, rate, length)[0][0][0]:
 
             self.data[self.path_from_id()].append(inputData)
-            return np.array([(inputData * 0.5, self.stamp[self.path_from_id()])])
+            return (np.array([inputData * (1-self.inputs[1].getData(timeData, rate, length)[0][0][0])]), np.array([self.stamp[self.path_from_id()]]))
         else:
             newData = self.data[self.path_from_id()].popleft()
-            result = (newData + inputData) * 0.5
+            result = newData * self.inputs[1].getData(timeData, rate, length)[0][0][0] + inputData * (1 - self.inputs[1].getData(timeData, rate, length)[0][0][0])
             self.data[self.path_from_id()].append(result)
-            return np.array([(result * 0.5, self.stamp[self.path_from_id()])])
+            return (np.array([result]), np.array([self.stamp[self.path_from_id()]]))
                     
     
     bl_idname = 'DelayNode'
@@ -47,6 +43,7 @@ class DelayNode(Node, AudioTreeNode):
     def init(self, context):
         self.inputs.new('RawAudioSocketType', "Audio")
         self.inputs.new('RawAudioSocketType', "Delay")
+        self.inputs.new('RawAudioSocketType', "Factor")
         self.inputs[1].value_prop = 1.0
         self.outputs.new('RawAudioSocketType', "Audio")
 

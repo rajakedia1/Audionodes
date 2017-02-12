@@ -99,6 +99,7 @@ class AudioTree(NodeTree):
     
     def needsAudio(self):
         if self.ch[0].get_queue() == None:
+            print("endevent wasn't catched properly or initial start")
             return True
         pygame.event.wait()
         return True

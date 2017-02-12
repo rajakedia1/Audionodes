@@ -32,8 +32,10 @@ class AudioTree(NodeTree):
 
     def setupPygame(self):
         if not self.pygameInited[0]:
-            pygame.mixer.init(self.sample_rate, -16, 1, self.chunk_size)
+            pygame.mixer.pre_init(self.sample_rate, -16, 1, self.chunk_size)
+            pygame.init()
             self.ch[0]=pygame.mixer.Channel(0)
+            self.ch[0].set_endevent(pygame.locals.USEREVENT)
             self.pygameInited[0] = True
 
     def play_chunk(self, outputData):
@@ -96,13 +98,10 @@ class AudioTree(NodeTree):
                             order.append(link.to_node.name)
     
     def needsAudio(self):
-        try:
-            if self.ch[0].get_queue() == None:
-                return True
-            else:
-                return False
-        except:
+        if self.ch[0].get_queue() == None:
             return True
+        pygame.event.wait()
+        return True
     
     def needsReconstruct(self):
         return self.structureChanged[0]

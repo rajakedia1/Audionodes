@@ -151,23 +151,22 @@ class Sink(Node, AudioTreeNode):
         internalTime = time.time()
         order = []
         while self.running[0]:
-            needsUpdate = False
+            needsUpdate, needsReconstruct = False, False
             
-            self.getTree().setupPygame()
             try:
+                self.getTree().setupPygame()
                 needsUpdate = self.getTree().needsAudio()
-            except AttributeError: # A random error sometimes gets thrown here
+                needsReconstruct = self.getTree().needsReconstruct()
+            except AttributeError: # A random error gets thrown here when blender is closed
                 pass
             
-            if self.getTree().needsReconstruct():
+            if needsReconstruct:
                 self.getTree().reconstruct(order)
             
             if needsUpdate:
                 internalTime = internalTime + self.getTree().chunk_size/self.getTree().sample_rate
                 self.updateSound(internalTime, order)
             
-            time.sleep(0.01)
-    
     def init(self, context):
         self.inputs.new('RawAudioSocketType', "Audio")
         self.running[0] = True
